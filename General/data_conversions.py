@@ -120,7 +120,7 @@ def Convert_bil_to_tiff(input_bil, output_tiff):
     input_bil -- name, name of the bil file
     output_tiff -- Name of the output tiff file
     """
-    import gdalconst
+    from osgeo import gdalconst
     
     gdal.GetDriverByName('EHdr').Register()
     dest = gdal.Open(input_bil, gdalconst.GA_ReadOnly)

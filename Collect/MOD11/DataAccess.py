@@ -19,7 +19,7 @@ import requests
 from joblib import Parallel, delayed
 import sys
 
-from digitalarz.hdf_reader import HDFReader
+from watertools.digitalarz.hdf_reader import HDFReader
 
 if sys.version_info[0] == 3:
     import urllib.request
@@ -207,7 +207,7 @@ def RetrieveData(Date, args):
                 LSTfileName = os.path.join(output_folder,
                                            'LST_MOD11A1_K_daily_' + Date.strftime('%Y') + '.' + Date.strftime(
                                                '%m') + '.' + Date.strftime('%d') + '.%02d%02d.tif' % (
-                                           hour_GMT, minutes_GMT))
+                                               hour_GMT, minutes_GMT))
                 os.remove(name_collect_time)
                 os.remove(name_reprojected_time)
                 if time_info == 1:
@@ -347,10 +347,10 @@ def Collect_data(TilesHorizontal, TilesVertical, Date, output_folder, TimeStep, 
                 os.chdir(hdf_library)
                 if TimeStep == 8:
                     hdf_name = glob.glob("MOD11A2.A%s%03s.h%02dv%02d.*" % (
-                    Date.strftime('%Y'), Date.strftime('%j'), Horizontal, Vertical))
+                        Date.strftime('%Y'), Date.strftime('%j'), Horizontal, Vertical))
                 if TimeStep == 1:
                     hdf_name = glob.glob("MOD11A1.A%s%03s.h%02dv%02d.*" % (
-                    Date.strftime('%Y'), Date.strftime('%j'), Horizontal, Vertical))
+                        Date.strftime('%Y'), Date.strftime('%j'), Horizontal, Vertical))
 
                 if len(hdf_name) == 1:
                     hdf_file = os.path.join(hdf_library, hdf_name[0])
@@ -435,7 +435,7 @@ def Collect_data(TilesHorizontal, TilesVertical, Date, output_folder, TimeStep, 
                 # else:
                 #     sdslist = [sdsdict[k] for k in sdsdict.keys() if (('SUBDATASET_5_NAME') in k or ('SUBDATASET_7_NAME') in k or ('SUBDATASET_8_NAME') in k)]
                 hdf_reader = HDFReader(file_name)
-                hdf_reader.to_geotiff()
+                # hdf_reader.to_geotiff_all()
                 dataset_names = hdf_reader.get_dataset_names()
                 # sdslist = []
                 if day_night == "day":
@@ -447,8 +447,9 @@ def Collect_data(TilesHorizontal, TilesVertical, Date, output_folder, TimeStep, 
                 sds_obsang = []
 
                 for n in sdslist:
-                    fp = os.path.join(hdf_reader.metadata['custom']['tiff_path'], f"{n}.tif")
-                    sds.append(gdal.Open(fp))
+                    # fp = os.path.join(hdf_reader.metadata['custom']['tiff_path'], f"{n}.tif")
+                    # sds.append(gdal.Open(fp))
+                    sds.append(hdf_reader.to_gdal_dataset(n))
                     if day_night == "day":
                         full_layer = [i for i in sdslist if 'LST_Day_1km' in i]
                     else:

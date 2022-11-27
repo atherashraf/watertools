@@ -6,6 +6,8 @@ Module: Collect/MOD13
 
 # import general python modules
 import os
+import shutil
+
 import numpy as np
 import pandas as pd
 from osgeo import gdal
@@ -18,8 +20,11 @@ import requests
 import glob
 from joblib import Parallel, delayed
 import sys
+
+from watertools.digitalarz.hdf_reader import HDFReader
+
 if sys.version_info[0] == 3:
-    import urllib.request    
+    import urllib.request
     import urllib.parse
 if sys.version_info[0] == 2:
     import urlparse
@@ -30,10 +35,10 @@ import watertools
 import watertools.General.raster_conversions as RC
 import watertools.General.data_conversions as DC
 
+
 def DownloadData(Dir, Startdate, Enddate, latlim, lonlim, Waitbar, cores, hdf_library, remove_hdf):
     """
     This function downloads MOD13 16-daily data
-
     Keyword arguments:
     Dir -- 'C:/file/to/path/'
     Startdate -- 'yyyy-mm-dd'
@@ -52,14 +57,14 @@ def DownloadData(Dir, Startdate, Enddate, latlim, lonlim, Waitbar, cores, hdf_li
         Enddate = pd.Timestamp('Now')
 
     # Make an array of the days of which the NDVI is taken
-    Dates = Make_TimeStamps(Startdate,Enddate)
+    Dates = Make_TimeStamps(Startdate, Enddate)
 
     # Create Waitbar
     if Waitbar == 1:
         import watertools.Functions.Random.WaitbarConsole as WaitbarConsole
         total_amount = len(Dates)
         amount = 0
-        WaitbarConsole.printWaitBar(amount, total_amount, prefix = 'Progress:', suffix = 'Complete', length = 50)
+        WaitbarConsole.printWaitBar(amount, total_amount, prefix='Progress:', suffix='Complete', length=50)
 
     # Check the latitude and longitude and otherwise set lat or lon on greatest extent
     if latlim[0] < -90 or latlim[1] > 90:
@@ -78,7 +83,8 @@ def DownloadData(Dir, Startdate, Enddate, latlim, lonlim, Waitbar, cores, hdf_li
         os.makedirs(output_folder)
 
     # Define which MODIS tiles are required
-    TilesVertical, TilesHorizontal = watertools.Collect.MOD15.DataAccess.Get_tiles_from_txt(output_folder, hdf_library, latlim, lonlim)
+    TilesVertical, TilesHorizontal = watertools.Collect.MOD15.DataAccess.Get_tiles_from_txt(output_folder, hdf_library,
+                                                                                            latlim, lonlim)
 
     # Pass variables to parallel function and run
     args = [output_folder, TilesVertical, TilesHorizontal, latlim, lonlim, hdf_library]
@@ -87,7 +93,7 @@ def DownloadData(Dir, Startdate, Enddate, latlim, lonlim, Waitbar, cores, hdf_li
             RetrieveData(Date, args)
             if Waitbar == 1:
                 amount += 1
-                WaitbarConsole.printWaitBar(amount, total_amount, prefix = 'Progress:', suffix = 'Complete', length = 50)
+                WaitbarConsole.printWaitBar(amount, total_amount, prefix='Progress:', suffix='Complete', length=50)
         results = True
     else:
         results = Parallel(n_jobs=cores)(delayed(RetrieveData)(Date, args)
@@ -99,13 +105,13 @@ def DownloadData(Dir, Startdate, Enddate, latlim, lonlim, Waitbar, cores, hdf_li
         files = glob.glob("*.hdf")
         for f in files:
             os.remove(os.path.join(output_folder, f))
-
         # Remove all .txt files
-        #files = glob.glob("*.txt")
-        #for f in files:
+        # files = glob.glob("*.txt")
+        # for f in files:
         #    os.remove(os.path.join(output_folder, f))
 
-    return(results)
+    return (results)
+
 
 def RetrieveData(Date, args):
     """
@@ -119,10 +125,11 @@ def RetrieveData(Date, args):
     # Argument
     [output_folder, TilesVertical, TilesHorizontal, latlim, lonlim, hdf_library] = args
 
-    NDVIfileName = os.path.join(output_folder, 'NDVI_MOD13Q1_-_16-daily_' + Date.strftime('%Y') + '.' + Date.strftime('%m') + '.' + Date.strftime('%d') + '.tif')
+    NDVIfileName = os.path.join(output_folder, 'NDVI_MOD13Q1_-_16-daily_' + Date.strftime('%Y') + '.' + Date.strftime(
+        '%m') + '.' + Date.strftime('%d') + '.tif')
 
     if not os.path.exists(NDVIfileName):
-        
+
         # Collect the data from the MODIS webpage and returns the data and lat and long in meters of those tiles
         try:
             Collect_data(TilesHorizontal, TilesVertical, Date, output_folder, hdf_library)
@@ -131,26 +138,27 @@ def RetrieveData(Date, args):
         try:
             # Define the output name of the collect data function
             name_collect = os.path.join(output_folder, 'Merged.tif')
-        
+
             # Reproject the MODIS product to epsg_to
-            epsg_to ='4326'
+            epsg_to = '4326'
             name_reprojected = RC.reproject_MODIS(name_collect, epsg_to)
-        
+
             # Clip the data to the users extend
             data, geo, proj = RC.clip_data(name_reprojected, latlim, lonlim)
-        
+
             # Save results as Gtiff
             DC.Save_as_tiff(name=NDVIfileName, data=data, geo=geo, projection='WGS84')
-        
+
             # remove the side products
             os.remove(os.path.join(output_folder, name_collect))
             os.remove(os.path.join(output_folder, name_reprojected))
         except:
-            print("Failed for date: %s" %Date)
-            
+            print("Failed for date: %s" % Date)
+
     return True
 
-def Make_TimeStamps(Startdate,Enddate):
+
+def Make_TimeStamps(Startdate, Enddate):
     '''
     This function determines all time steps of which the NDVI must be downloaded
     The time stamps are 16 daily.
@@ -161,52 +169,53 @@ def Make_TimeStamps(Startdate,Enddate):
     '''
 
     # Define the DOY and year of the start day
-    DOY = datetime.datetime.strptime(Startdate,'%Y-%m-%d').timetuple().tm_yday
-    Year = datetime.datetime.strptime(Startdate,'%Y-%m-%d').timetuple().tm_year
+    DOY = datetime.datetime.strptime(Startdate, '%Y-%m-%d').timetuple().tm_yday
+    Year = datetime.datetime.strptime(Startdate, '%Y-%m-%d').timetuple().tm_year
 
     # Define the year of the end day
-    YearEnd = datetime.datetime.strptime(Enddate,'%Y-%m-%d').timetuple().tm_year
+    YearEnd = datetime.datetime.strptime(Enddate, '%Y-%m-%d').timetuple().tm_year
 
     # Change the DOY of the start day into a DOY of MODIS day (16-daily) and create new startdate
     DOYstart = int(math.floor(DOY / 16.0) * 16) + 1
-    DOYstart = str('%s-%s' %(DOYstart, Year))
+    DOYstart = str('%s-%s' % (DOYstart, Year))
     Day = datetime.datetime.strptime(DOYstart, '%j-%Y')
     Month = '%02d' % Day.month
     Day = '%02d' % Day.day
     Startdate = (str(Year) + '-' + str(Month) + '-' + str(Day))
 
     # Create the start and end data for the whole year
-    YearStartDate = pd.date_range(Startdate, Enddate, freq = 'AS')
-    YearEndDate = pd.date_range(Startdate, Enddate, freq = 'A')
+    YearStartDate = pd.date_range(Startdate, Enddate, freq='AS')
+    YearEndDate = pd.date_range(Startdate, Enddate, freq='A')
 
     # Define the amount of years that are involved
     AmountOfYear = YearEnd - Year
 
     # If the startday is not in the same year as the enddate
     if AmountOfYear > 0:
-        for i in range(0, AmountOfYear+1):
+        for i in range(0, AmountOfYear + 1):
             if i == 0:
                 Startdate1 = Startdate
                 Enddate1 = YearEndDate[0]
-                Dates = pd.date_range(Startdate1, Enddate1, freq = '16D')
+                Dates = pd.date_range(Startdate1, Enddate1, freq='16D')
             if i == AmountOfYear:
                 Startdate1 = YearStartDate[-1]
                 Enddate1 = Enddate
-                Dates1 = pd.date_range(Startdate1, Enddate1, freq = '16D')
+                Dates1 = pd.date_range(Startdate1, Enddate1, freq='16D')
                 Dates = Dates.union(Dates1)
             if (i != AmountOfYear and i != 0):
-                Startdate1 = YearStartDate[i-AmountOfYear-1]
+                Startdate1 = YearStartDate[i - AmountOfYear - 1]
                 Enddate1 = YearEndDate[i]
-                Dates1 = pd.date_range(Startdate1, Enddate1, freq = '16D')
+                Dates1 = pd.date_range(Startdate1, Enddate1, freq='16D')
                 Dates = Dates.union(Dates1)
 
     # If the startday is in the same year as the enddate
     if AmountOfYear == 0:
-        Dates = pd.date_range(Startdate, Enddate, freq = '16D')
+        Dates = pd.date_range(Startdate, Enddate, freq='16D')
 
-    return(Dates)
+    return (Dates)
 
-def Collect_data(TilesHorizontal,TilesVertical,Date,output_folder, hdf_library):
+
+def Collect_data(TilesHorizontal, TilesVertical, Date, output_folder, hdf_library):
     '''
     This function downloads all the needed MODIS tiles from http://e4ftl01.cr.usgs.gov/MOLT/MOD13Q1.006/ as a hdf file.
 
@@ -226,24 +235,26 @@ def Collect_data(TilesHorizontal,TilesVertical,Date,output_folder, hdf_library):
     username, password = watertools.Functions.Random.Get_Username_PWD.GET('NASA')
 
     # Create the Lat and Long of the MODIS tile in meters
-    for Vertical in range(int(TilesVertical[0]), int(TilesVertical[1])+1):
-        Distance = 231.65635826395834 # resolution of a MODIS pixel in meter
-        countY=(TilesVertical[1] - TilesVertical[0] + 1) - (Vertical - TilesVertical[0])
+    for Vertical in range(int(TilesVertical[0]), int(TilesVertical[1]) + 1):
+        Distance = 231.65635826395834  # resolution of a MODIS pixel in meter
+        countY = (TilesVertical[1] - TilesVertical[0] + 1) - (Vertical - TilesVertical[0])
 
         for Horizontal in range(int(TilesHorizontal[0]), int(TilesHorizontal[1]) + 1):
-            countX=Horizontal - TilesHorizontal[0] + 1
+            countX = Horizontal - TilesHorizontal[0] + 1
 
-		      # Reset the begin parameters for downloading
+            # Reset the begin parameters for downloading
             downloaded = 0
-            N=0
+            N = 0
 
             # Download the MODIS NDVI data
-            url = 'https://e4ftl01.cr.usgs.gov/MOLT/MOD13Q1.061/' + Date.strftime('%Y') + '.' + Date.strftime('%m') + '.' + Date.strftime('%d') + '/'
+            url = 'https://e4ftl01.cr.usgs.gov/MOLT/MOD13Q1.061/' + Date.strftime('%Y') + '.' + Date.strftime(
+                '%m') + '.' + Date.strftime('%d') + '/'
 
-	         # Check the library given by user
+            # Check the library given by user
             if hdf_library is not None:
                 os.chdir(hdf_library)
-                hdf_name = glob.glob("MOD13Q1.A%s%03s.h%02dv%02d.*" %(Date.strftime('%Y'), Date.strftime('%j'), Horizontal, Vertical))
+                hdf_name = glob.glob(
+                    "MOD13Q1.A%s%03s.h%02dv%02d.*" % (Date.strftime('%Y'), Date.strftime('%j'), Horizontal, Vertical))
 
                 if len(hdf_name) == 1:
                     hdf_file = os.path.join(hdf_library, hdf_name[0])
@@ -258,76 +269,84 @@ def Collect_data(TilesHorizontal,TilesVertical,Date,output_folder, hdf_library):
                     # Get files on FTP server
                     if sys.version_info[0] == 3:
                         f = urllib.request.urlopen(url)
-    
+
                     if sys.version_info[0] == 2:
                         f = urllib2.urlopen(url)
 
                     # Sum all the files on the server
                     soup = BeautifulSoup(f, "lxml")
-                    for i in soup.findAll('a', attrs = {'href': re.compile('(?i)(hdf)$')}):
-    
+                    for i in soup.findAll('a', attrs={'href': re.compile('(?i)(hdf)$')}):
+
                         # Find the file with the wanted tile number
-                        Vfile=str(i)[30:32]
-                        Hfile=str(i)[27:29]
+                        Vfile = str(i)[30:32]
+                        Hfile = str(i)[27:29]
                         if int(Vfile) is int(Vertical) and int(Hfile) is int(Horizontal):
-    
+
                             # Define the whole url name
                             if sys.version_info[0] == 3:
                                 full_url = urllib.parse.urljoin(url, i['href'])
-    
+
                             if sys.version_info[0] == 2:
                                 full_url = urlparse.urljoin(url, i['href'])
-    
+
                             # if not downloaded try to download file
                             while downloaded == 0:
-    
-                                try:# open http and download whole .hdf
+
+                                try:  # open http and download whole .hdf
                                     nameDownload = full_url
-                                    file_name = os.path.join(output_folder,nameDownload.split('/')[-1])
+                                    file_name = os.path.join(output_folder, nameDownload.split('/')[-1])
                                     if os.path.isfile(file_name):
-                                        #print "file ", file_name, " already exists"
+                                        # print "file ", file_name, " already exists"
                                         downloaded = 1
                                     else:
-                                        x = requests.get(nameDownload, allow_redirects = False)
+                                        x = requests.get(nameDownload, allow_redirects=False)
                                         try:
-                                            y = requests.get(x.headers['location'], auth = (username, password))
+                                            y = requests.get(x.headers['location'], auth=(username, password))
                                         except:
                                             from requests.packages.urllib3.exceptions import InsecureRequestWarning
                                             requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-    
-                                            y = requests.get(x.headers['location'], auth = (username, password), verify = False)
+
+                                            y = requests.get(x.headers['location'], auth=(username, password),
+                                                             verify=False)
                                         z = open(file_name, 'wb')
                                         z.write(y.content)
                                         z.close()
                                         statinfo = os.stat(file_name)
                                         # Say that download was succesfull
                                         if int(statinfo.st_size) > 10000:
-                                             downloaded = 1
-    
+                                            downloaded = 1
+
                                 # If download was not succesfull
                                 except:
-    
+
                                     # Try another time
                                     N = N + 1
-    
-                				           # Stop trying after 10 times
+
+                                    # Stop trying after 10 times
                                     if N == 10:
                                         print('Data from ' + Date.strftime('%Y-%m-%d') + ' is not available')
                                         downloaded = 1
 
                 except:
-                        print("Url not found: %s" %url)     
+                    print("Url not found: %s" % url)
 
-                                       
             try:
                 # Open .hdf only band with NDVI and collect all tiles to one array
-                dataset = gdal.Open(file_name)
-                sdsdict = dataset.GetMetadata('SUBDATASETS')
-                sdslist = [sdsdict[k] for k in sdsdict.keys() if '_1_NAME' in k]
+                # dataset = gdal.Open(file_name)
+                hdf_reader = HDFReader(file_name)
+                # hdf_reader.to_geotiff_all()
+                dataset_names = hdf_reader.get_dataset_names()
+                # sdsdict = dataset.GetMetadata('SUBDATASETS')
+                # sdslist = [sdsdict[k] for k in sdsdict.keys() if '_1_NAME' in k]
+                sdslist = [name for name in dataset_names if 'NDVI' in name]
+
                 sds = []
 
                 for n in sdslist:
-                    sds.append(gdal.Open(n))
+                    # hdf_reader.to_geotiff(n)
+                    # fp = os.path.join(hdf_reader.metadata['custom']['tiff_path'], f"{n}.tif")
+                    # sds.append(gdal.Open(fp))
+                    sds.append(hdf_reader.to_gdal_dataset(n))
                     full_layer = [i for i in sdslist if 'NDVI' in i]
                     idx = sdslist.index(full_layer[0])
                     if Horizontal == TilesHorizontal[0] and Vertical == TilesVertical[0]:
@@ -338,30 +357,31 @@ def Collect_data(TilesHorizontal,TilesVertical,Date,output_folder, hdf_library):
 
                     data = sds[idx].ReadAsArray()
                     countYdata = (TilesVertical[1] - TilesVertical[0] + 2) - countY
-                    DataTot[int((countYdata - 1) * 4800):int(countYdata * 4800), int((countX - 1) * 4800):int(countX * 4800)]=data * 0.0001
+                    DataTot[int((countYdata - 1) * 4800):int(countYdata * 4800),
+                    int((countX - 1) * 4800):int(countX * 4800)] = data * 0.0001
                 del data
 
             # if the tile not exists or cannot be opened, create a nan array with the right projection
             except:
-                if Horizontal==TilesHorizontal[0] and Vertical==TilesVertical[0]:
-                     x1 = (TilesHorizontal[0] - 19) * 4800 * Distance
-                     x4 = (TilesVertical[0] - 9) * 4800 * -1 * Distance
-                     geo = 	[x1, Distance, 0.0, x4, 0.0, -Distance]
-                     geo_t=tuple(geo)
+                if Horizontal == TilesHorizontal[0] and Vertical == TilesVertical[0]:
+                    x1 = (TilesHorizontal[0] - 19) * 4800 * Distance
+                    x4 = (TilesVertical[0] - 9) * 4800 * -1 * Distance
+                    geo = [x1, Distance, 0.0, x4, 0.0, -Distance]
+                    geo_t = tuple(geo)
 
-                proj='PROJCS["unnamed",GEOGCS["Unknown datum based upon the custom spheroid",DATUM["Not specified (based on custom spheroid)",SPHEROID["Custom spheroid",6371007.181,0]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],PROJECTION["Sinusoidal"],PARAMETER["longitude_of_center",0],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]'
-                data=np.ones((4800,4800)) * (-3000)
-                countYdata=(TilesVertical[1] - TilesVertical[0] + 2) - countY
-                DataTot[(countYdata - 1) * 4800:countYdata * 4800,(countX - 1) * 4800:countX * 4800] = data * 0.0001
+                proj = 'PROJCS["unnamed",GEOGCS["Unknown datum based upon the custom spheroid",DATUM["Not specified (based on custom spheroid)",SPHEROID["Custom spheroid",6371007.181,0]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],PROJECTION["Sinusoidal"],PARAMETER["longitude_of_center",0],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]'
+                data = np.ones((4800, 4800)) * (-3000)
+                countYdata = (TilesVertical[1] - TilesVertical[0] + 2) - countY
+                DataTot[(countYdata - 1) * 4800:countYdata * 4800, (countX - 1) * 4800:countX * 4800] = data * 0.0001
 
     # Make geotiff file
     name2 = os.path.join(output_folder, 'Merged.tif')
     driver = gdal.GetDriverByName("GTiff")
     dst_ds = driver.Create(name2, DataTot.shape[1], DataTot.shape[0], 1, gdal.GDT_Float32, ['COMPRESS=LZW'])
     try:
-         dst_ds.SetProjection(proj)
+        dst_ds.SetProjection(proj)
     except:
-        proj='PROJCS["unnamed",GEOGCS["Unknown datum based upon the custom spheroid",DATUM["Not specified (based on custom spheroid)",SPHEROID["Custom spheroid",6371007.181,0]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],PROJECTION["Sinusoidal"],PARAMETER["longitude_of_center",0],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]'
+        proj = 'PROJCS["unnamed",GEOGCS["Unknown datum based upon the custom spheroid",DATUM["Not specified (based on custom spheroid)",SPHEROID["Custom spheroid",6371007.181,0]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],PROJECTION["Sinusoidal"],PARAMETER["longitude_of_center",0],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]'
         x1 = (TilesHorizontal[0] - 18) * 4800 * Distance
         x4 = (TilesVertical[0] - 9) * 4800 * -1 * Distance
         geo = [x1, Distance, 0.0, x4, 0.0, -Distance]
@@ -373,4 +393,4 @@ def Collect_data(TilesHorizontal,TilesVertical,Date,output_folder, hdf_library):
     dst_ds.GetRasterBand(1).WriteArray(DataTot)
     dst_ds = None
     sds = None
-    return()
+    return ()
