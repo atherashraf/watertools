@@ -334,11 +334,10 @@ def Collect_data(TilesHorizontal, TilesVertical, Date, output_folder, hdf_librar
                 # Open .hdf only band with NDVI and collect all tiles to one array
                 # dataset = gdal.Open(file_name)
                 hdf_reader = HDFReader(file_name)
-                # hdf_reader.to_geotiff_all()
                 dataset_names = hdf_reader.get_dataset_names()
                 # sdsdict = dataset.GetMetadata('SUBDATASETS')
                 # sdslist = [sdsdict[k] for k in sdsdict.keys() if '_1_NAME' in k]
-                sdslist = [name for name in dataset_names if 'NDVI' in name]
+                sdslist = [dataset_names[0]]
 
                 sds = []
 

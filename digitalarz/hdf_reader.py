@@ -1,4 +1,5 @@
 import os.path
+import traceback
 
 import numpy as np
 import pandas as pd
@@ -190,11 +191,15 @@ class HDFReader:
         return self.metadata['custom']['tiff_path']
 
     def to_gdal_dataset(self, ds_name):
-        data = self.get_data(ds_name)
-        ds = GDALRasterIO.from_numpy(
-            data, geo_transform=self.get_geo_transform(),
-            proj_crs=self.get_crs())
-        return ds
+        try:
+            data = self.get_data(ds_name)
+            bands, *_ = data.shape
+            ds = GDALRasterIO.from_numpy(
+                data, geo_transform=self.get_geo_transform(),
+                proj_crs=self.get_crs())
+            return ds
+        except Exception as e:
+            traceback.print_exc()
 
     def to_geotiff(self, ds_name):
         tiff_path = self.get_tiff_path()

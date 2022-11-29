@@ -17,6 +17,9 @@ import glob
 import requests
 from joblib import Parallel, delayed
 import sys
+
+from watertools.digitalarz.hdf_reader import HDFReader
+
 if sys.version_info[0] == 3:
     import urllib.parse
     import urllib.request
@@ -255,23 +258,29 @@ def Collect_data(TilesHorizontal,TilesVertical,Date,output_folder, hdf_library):
                                     # Try another time
                                     N = N + 1
     
-                				         # Stop trying after 10 times
+                				    # Stop trying after 10 times
                                     if N == 10:
                                         print('Data from ' + Date.strftime('%Y-%m-%d') + ' is not available')
                                         downloaded = 1
                                         
                 except:
-                        print("Url not found: %s" %url)                                           
+                    print("Url not found: %s" %url)
                                         
             try:
                 # Open .hdf only band with NDVI and collect all tiles to one array
-                dataset = gdal.Open(file_name)
-                sdsdict = dataset.GetMetadata('SUBDATASETS')
-                sdslist = [sdsdict[k] for k in sdsdict.keys() if '_4_NAME' in k]
+                # dataset = gdal.Open(file_name)
+                # sdsdict = dataset.GetMetadata('SUBDATASETS')
+                # sdslist = [sdsdict[k] for k in sdsdict.keys() if '_4_NAME' in k]
+                hdf_reader = HDFReader(file_name)
+                dataset_names = hdf_reader.get_dataset_names()
+                # print("\n datasets:", dataset_names)
+                sdslist = [dataset_names[3]]
+                # print("\n sdslist:", sdslist)
                 sds = []
 
                 for n in sdslist:
-                    sds.append(gdal.Open(n))
+                    # sds.append(gdal.Open(n))
+                    sds.append(hdf_reader.to_gdal_dataset(n))
                     full_layer = [i for i in sdslist if 'Sur_albedo' in i]
                     idx = sdslist.index(full_layer[0])
                     if Horizontal == TilesHorizontal[0] and Vertical == TilesVertical[0]:

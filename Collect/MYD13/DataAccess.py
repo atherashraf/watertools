@@ -6,6 +6,8 @@ Module: Collect/MOD13
 
 # import general python modules
 import os
+import traceback
+
 import numpy as np
 import pandas as pd
 from osgeo import gdal
@@ -18,6 +20,9 @@ import requests
 import glob
 from joblib import Parallel, delayed
 import sys
+
+from watertools.digitalarz.hdf_reader import HDFReader
+
 if sys.version_info[0] == 3:
     import urllib.request    
     import urllib.parse
@@ -128,6 +133,7 @@ def RetrieveData(Date, args):
             Collect_data(TilesHorizontal, TilesVertical, Date, output_folder, hdf_library)
         except:
             print("Was not able to download the file")
+            traceback.print_exc()
         try:
             # Define the output name of the collect data function
             name_collect = os.path.join(output_folder, 'Merged.tif')
@@ -148,6 +154,7 @@ def RetrieveData(Date, args):
             
         except:
             print("Failed for date: %s" %Date)
+            traceback.print_exc()
             
     return True
 
@@ -318,17 +325,24 @@ def Collect_data(TilesHorizontal,TilesVertical,Date,output_folder, hdf_library):
                                         downloaded = 1
                                         
                 except:
-                        print("Url not found: %s" %url)                                          
+                    print("Url not found: %s" %url)
+                    traceback.print_exc()
+
                                         
             try:
                 # Open .hdf only band with NDVI and collect all tiles to one array
-                dataset = gdal.Open(file_name)
-                sdsdict = dataset.GetMetadata('SUBDATASETS')
-                sdslist = [sdsdict[k] for k in sdsdict.keys() if '_1_NAME' in k]
+                # dataset = gdal.Open(file_name)
+                # sdsdict = dataset.GetMetadata('SUBDATASETS')
+                # sdslist = [sdsdict[k] for k in sdsdict.keys() if '_1_NAME' in k]
+                hdf_reader = HDFReader(file_name)
+                dataset_names = hdf_reader.get_dataset_names()
+                sdslist = [dataset_names[0]]
+
                 sds = []
 
                 for n in sdslist:
-                    sds.append(gdal.Open(n))
+                    # sds.append(gdal.Open(n))
+                    sds.append(hdf_reader.to_gdal_dataset(n))
                     full_layer = [i for i in sdslist if 'NDVI' in i]
                     idx = sdslist.index(full_layer[0])
                     if Horizontal == TilesHorizontal[0] and Vertical == TilesVertical[0]:

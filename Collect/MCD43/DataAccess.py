@@ -16,6 +16,9 @@ import glob
 import requests
 from joblib import Parallel, delayed
 import sys
+
+from watertools.digitalarz.hdf_reader import HDFReader
+
 if sys.version_info[0] == 3:
     import urllib.parse
     import urllib.request
@@ -264,13 +267,19 @@ def Collect_data(TilesHorizontal,TilesVertical,Date,output_folder, hdf_library):
                                         
             try:
                 # Open .hdf only band with NDVI and collect all tiles to one array
-                dataset = gdal.Open(file_name)
-                sdsdict = dataset.GetMetadata('SUBDATASETS')
-                sdslist = [sdsdict[k] for k in sdsdict.keys() if '_20_NAME' in k]
+                # dataset = gdal.Open(file_name)
+                # sdsdict = dataset.GetMetadata('SUBDATASETS')
+                # sdslist = [sdsdict[k] for k in sdsdict.keys() if '_20_NAME' in k]
+                hdf_reader = HDFReader()
+                dataset_names = hdf_reader.get_dataset_names()
+                print("dataset_names:", dataset_names)
+                sdslist = [dataset_names[19]]
+                print("dataset:", sdslist)
                 sds = []
 
                 for n in sdslist:
-                    sds.append(gdal.Open(n))
+                    # sds.append(gdal.Open(n))
+                    sds.append(hdf_reader.to_gdal_dataset(n))
                     full_layer = [i for i in sdslist if 'Albedo_BSA_shortwave' in i]
                     idx = sdslist.index(full_layer[0])
                     if Horizontal == TilesHorizontal[0] and Vertical == TilesVertical[0]:
