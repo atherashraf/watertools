@@ -5,6 +5,9 @@ Module: Collect/SRTM
 """
 
 # General modules
+import ssl
+import traceback
+
 import numpy as np
 import os
 import urllib
@@ -258,16 +261,18 @@ def Download_Data(nameFile, output_folder_trash):
 
     # download data from the internet
     url= "http://srtm.csi.cgiar.org/wp-content/uploads/files/srtm_5x5/TIFF/%s" %(nameFile) 
-    
+    # print(url)
     try:    
         socket.setdefaulttimeout(300)
         file_name = url.split('/')[-1]
         output_file = os.path.join(output_folder_trash, file_name)
+        ssl._create_default_https_context = ssl._create_unverified_context
         if sys.version_info[0] == 3:
             urllib.request.urlretrieve(url, output_file)
         if sys.version_info[0] == 2:
             urllib.urlretrieve(url, output_file)
     except:
+        traceback.print_exc()
         pass
 
     return(output_file, file_name)
