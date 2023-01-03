@@ -3,7 +3,7 @@ Module: Collect/CFSR
 """
 # General modules
 import os
-import pycurl
+# import pycurl
 import datetime
 
 def Download_data(Date, Version, output_folder, Var):

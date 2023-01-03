@@ -10,7 +10,7 @@ import numpy as np
 import os
 import pandas as pd
 import re
-import pycurl
+# import pycurl
 import shutil
 
 # WA+ modules
@@ -130,11 +130,12 @@ def Download_ETens_from_WA_FTP(output_folder, Lat_tiles, Lon_tiles):
                     local_filename = os.path.join(output_folder, Tilename)
 
                     # Download data from FTP
-                    curl = pycurl.Curl()
-                    curl.setopt(pycurl.URL, FTP_name)
-                    curl.setopt(pycurl.USERPWD, '%s:%s' %(username, password))
+                    curl = None
+                    # curl = pycurl.Curl()
+                    # curl.setopt(pycurl.URL, FTP_name)
+                    # curl.setopt(pycurl.USERPWD, '%s:%s' %(username, password))
                     fp = open(local_filename, "wb")
-                    curl.setopt(pycurl.WRITEDATA, fp)
+                    # curl.setopt(pycurl.WRITEDATA, fp)
                     curl.perform()
                     curl.close()
                     fp.close()

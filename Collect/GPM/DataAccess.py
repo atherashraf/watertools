@@ -16,6 +16,7 @@ from joblib import Parallel, delayed
 import watertools
 import watertools.General.data_conversions as DC
 
+
 def DownloadData(Dir, Startdate, Enddate, latlim, lonlim, Waitbar, cores, TimeCase):
     """
     This function downloads TRMM daily or monthly data
@@ -41,40 +42,40 @@ def DownloadData(Dir, Startdate, Enddate, latlim, lonlim, Waitbar, cores, TimeCa
     else:
         raise KeyError("The input time interval is not supported")
 
-	# Make directory
+    # Make directory
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-	# Check variables
+    # Check variables
     if not Startdate:
         Startdate = pd.Timestamp('2014-04-01')
     if not Enddate:
         Enddate = pd.Timestamp('Now')
-    Dates = pd.date_range(Startdate,  Enddate, freq=TimeFreq)
+    Dates = pd.date_range(Startdate, Enddate, freq=TimeFreq)
 
     # Create Waitbar
     if Waitbar == 1:
         import watertools.Functions.Random.WaitbarConsole as WaitbarConsole
         total_amount = len(Dates)
         amount = 0
-        WaitbarConsole.printWaitBar(amount, total_amount, prefix = 'Progress:', suffix = 'Complete', length = 50)
+        WaitbarConsole.printWaitBar(amount, total_amount, prefix='Progress:', suffix='Complete', length=50)
 
     if latlim[0] < -90 or latlim[1] > 90:
         print('Latitude above 90N or below 90S is not possible.'
-               ' Value set to maximum')
+              ' Value set to maximum')
         latlim[0] = np.max(latlim[0], -90)
         latlim[1] = np.min(lonlim[1], 90)
     if lonlim[0] < -180 or lonlim[1] > 180:
         print('Longitude must be between 180E and 180W.'
-               ' Now value is set to maximum')
+              ' Now value is set to maximum')
         lonlim[0] = np.max(latlim[0], -180)
         lonlim[1] = np.min(lonlim[1], 180)
 
     # Define IDs
-    yID = np.int16(np.array([np.ceil((latlim[0] + 90)*10),
-                                   np.floor((latlim[1] + 90)*10)]))
-    xID = np.int16(np.array([np.floor((lonlim[0])*10),
-                             np.ceil((lonlim[1])*10)]) + 1800)
+    yID = np.int16(np.array([np.ceil((latlim[0] + 90) * 10),
+                             np.floor((latlim[1] + 90) * 10)]))
+    xID = np.int16(np.array([np.floor((lonlim[0]) * 10),
+                             np.ceil((lonlim[1]) * 10)]) + 1800)
 
     # Pass variables to parallel function and run
     args = [output_folder, TimeCase, xID, yID, lonlim, latlim]
@@ -84,7 +85,7 @@ def DownloadData(Dir, Startdate, Enddate, latlim, lonlim, Waitbar, cores, TimeCa
             RetrieveData(Date, args)
             if Waitbar == 1:
                 amount += 1
-                WaitbarConsole.printWaitBar(amount, total_amount, prefix = 'Progress:', suffix = 'Complete', length = 50)
+                WaitbarConsole.printWaitBar(amount, total_amount, prefix='Progress:', suffix='Complete', length=50)
         results = True
     else:
         results = Parallel(n_jobs=cores)(delayed(RetrieveData)(Date, args)
@@ -106,41 +107,43 @@ def RetrieveData(Date, args):
     [output_folder, TimeCase, xID, yID, lonlim, latlim] = args
 
     year = Date.year
-    month= Date.month
+    month = Date.month
     day = Date.day
 
     username, password = watertools.Functions.Random.Get_Username_PWD.GET('NASA')
-    
+
     # Create https
     if TimeCase == 'daily':
-        URL = 'https://gpm1.gesdisc.eosdis.nasa.gov/opendap/GPM_L3/GPM_3IMERGDL.06/%d/%02d/3B-DAY-L.MS.MRG.3IMERG.%d%02d%02d-S000000-E235959.V06.nc4.ascii?precipitationCal[0][%d:1:%d][%d:1:%d]'  %(year, month, year, month, day, xID[0], xID[1]-1, yID[0], yID[1]-1)
-        DirFile = os.path.join(output_folder, "P_GPM.IMERG_mm-day-1_daily_%d.%02d.%02d.tif" %(year, month, day))
+        URL = 'https://gpm1.gesdisc.eosdis.nasa.gov/opendap/GPM_L3/GPM_3IMERGDL.06/%d/%02d/3B-DAY-L.MS.MRG.3IMERG.%d%02d%02d-S000000-E235959.V06.nc4.ascii?precipitationCal[0][%d:1:%d][%d:1:%d]' % (
+        year, month, year, month, day, xID[0], xID[1] - 1, yID[0], yID[1] - 1)
+        DirFile = os.path.join(output_folder, "P_GPM.IMERG_mm-day-1_daily_%d.%02d.%02d.tif" % (year, month, day))
         Scaling = 1
 
     if TimeCase == 'monthly':
-        URL = 'https://gpm1.gesdisc.eosdis.nasa.gov/opendap/GPM_L3/GPM_3IMERGM.06/%d/3B-MO.MS.MRG.3IMERG.%d%02d01-S000000-E235959.%02d.V06B.HDF5.ascii?precipitation%%5B0%%5D%%5B%d:1:%d%%5D%%5B%d:1:%d%%5D'  %(year, year, month, month, xID[0], xID[1]-1, yID[0], yID[1]-1)
-        Scaling = calendar.monthrange(year,month)[1] * 24
-        DirFile = os.path.join(output_folder, "P_GPM.IMERG_mm-month-1_monthly_%d.%02d.01.tif" %(year, month))
+        URL = 'https://gpm1.gesdisc.eosdis.nasa.gov/opendap/GPM_L3/GPM_3IMERGM.06/%d/3B-MO.MS.MRG.3IMERG.%d%02d01-S000000-E235959.%02d.V06B.HDF5.ascii?precipitation%%5B0%%5D%%5B%d:1:%d%%5D%%5B%d:1:%d%%5D' % (
+        year, year, month, month, xID[0], xID[1] - 1, yID[0], yID[1] - 1)
+        Scaling = calendar.monthrange(year, month)[1] * 24
+        DirFile = os.path.join(output_folder, "P_GPM.IMERG_mm-month-1_monthly_%d.%02d.01.tif" % (year, month))
 
     if not os.path.isfile(DirFile):
         session = requests.Session()
-        dataset = session.get(URL, allow_redirects=False,stream = True)
+        dataset = session.get(URL, allow_redirects=False, stream=True)
         try:
-            get_dataset = session.get(dataset, auth = (username,password),stream = True)
+            get_dataset = session.get(dataset, auth=(username, password), stream=True)
         except:
             from requests.packages.urllib3.exceptions import InsecureRequestWarning
             requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-            get_dataset  = requests.get(dataset.headers['location'], auth = (username, password), verify = False)
+            get_dataset = requests.get(dataset.headers['location'], auth=(username, password), verify=False)
 
         # download data (first save as text file)
-        pathtext = os.path.join(output_folder,'temp.txt')
-        z = open(pathtext,'wb')
+        pathtext = os.path.join(output_folder, 'temp.txt')
+        z = open(pathtext, 'wb')
         z.write(get_dataset.content)
         z.close()
 
         # Open text file and remove header and footer
-        data_start = np.genfromtxt(pathtext,dtype = float,skip_header = 1,delimiter=',')
-        data = data_start[:,1:] * Scaling
+        data_start = np.genfromtxt(pathtext, dtype=float, skip_header=1, delimiter=',')
+        data = data_start[:, 1:] * Scaling
         data[data < 0] = -9999
         data = data.transpose()
         data = np.flipud(data)

@@ -15,7 +15,7 @@ from pyproj import Proj, transform
 import scipy.interpolate
 import fiona
 import requests
-import pycurl
+# import pycurl
 import shapefile
 
 def Run_command_window(argument):
@@ -1374,7 +1374,8 @@ def getWKT_PRJ(epsg_code):
 
 def Update_log_website(url, postfields):
     
-    c = pycurl.Curl()
+    # c = pycurl.Curl()
+    c = None
     c.setopt(c.URL, url)
     c.setopt(c.POSTFIELDS, postfields)
     c.perform()    

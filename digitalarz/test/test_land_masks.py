@@ -16,7 +16,7 @@ from osgeo import gdal
 try:
     folder_input_ETLook_Static = r"/Users/atherashraf/PycharmProjects/DigitalArz/IPI/media/Output_Data/ETLook/ETLook_input_composite/Static"
     folders_input_RAW = r"/Users/atherashraf/PycharmProjects/DigitalArz/IPI/media/Input_Data"
-    NDVI_file = r"/Users/atherashraf/PycharmProjects/DigitalArz/IPI/media/Output_Data/ETLook/ETLook_input_composite/20220101/NDVI_20220101.tif"  # one tiff file from
+    NDVI_file = r"/media/Output_Data/ETLook/old/ETLook_input_composite/20220101/NDVI_20220101.tif"  # one tiff file from
 
     Date = datetime.datetime(2022, 1, 1)
     LandCover = "GlobCover"
